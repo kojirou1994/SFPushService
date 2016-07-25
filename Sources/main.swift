@@ -1,5 +1,6 @@
 import PerfectNotifications
 import PerfectHTTPServer
+import PerfectHTTP
 import PerfectLib
 import PerfectNet
 // BEGIN one-time initialization code
@@ -36,11 +37,28 @@ let ary = [IOSNotificationItem.alertBody("This is the message"), IOSNotification
 let n = NotificationPusher()
 
 n.apnsTopic = "com.company.my-app"
-
-n.pushIOS(configurationName, deviceToken: deviceId, expiration: 0, priority: 10, notificationItems: ary) {
-    response in
-    
-    print("NotificationResponse: \(response.code) \(response.body)")
+n.pushIOS(configurationName: configurationName, deviceToken: deviceId, expiration: 0, priority: 10, notificationItems: ary) { response in
+    print("NotificationResponse: \(response.status) \(response.body)")
 }
 
-// END - individual notification push
+let server = HTTPServer()
+
+var routes = Routes()
+
+routes.add(method: .post, uri: "/push") { (request, response) in
+    response.completed()
+}
+
+server.addRoutes(routes)
+
+server.serverPort = 8181
+
+server.serverAddress = "127.0.0.1"
+
+server.documentRoot = "./webroot"
+
+do {
+    try server.start()
+} catch PerfectError.networkError(let err, let msg) {
+    print("Network error thrown: \(err) \(msg)")
+}
