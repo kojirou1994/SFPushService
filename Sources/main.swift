@@ -3,6 +3,9 @@ import PerfectHTTPServer
 import PerfectHTTP
 import PerfectLib
 import PerfectNet
+import SFMongo
+import Foundation
+
 // BEGIN one-time initialization code
 
 let configurationName = "My configuration name - can be whatever"
@@ -45,7 +48,28 @@ let server = HTTPServer()
 
 var routes = Routes()
 
-routes.add(method: .post, uri: "/push") { (request, response) in
+routes.add(method: .post, uri: "/push/ios") { (request, response) in
+    guard let bodyString = request.postBodyString else {
+        response.status = .badRequest
+        response.completed()
+        return
+    }
+    let json = JSON.parse(bodyString)
+    guard let userTokens = json["userToken"].array, app = App(rawValue: json["app"].intValue), title = json["title"].string, body = json["body"].string, badge = json["badge"].int else {
+        response.status = .badRequest
+        response.completed()
+        return
+    }
+    var tokens = [String]()
+    for token in userTokens {
+        tokens.append(token.stringValue)
+    }
+    let date = Date()
+    let notifications = tokens.map{return Notification.init(userToken: $0, app: app, title: title, body: body, badge: badge, time: date)}
+    n.pushIOS(configurationName: configurationName, deviceTokens: tokens, expiration: 0, priority: 10, notificationItems: [.alertBody(body), .alertTitle(title), .badge(badge)], callback: { (responses) in
+        <#code#>
+    })
+    notifications.forEach{PushDBManager.shared.insert(notification: $0)}
     response.completed()
 }
 
