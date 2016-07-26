@@ -11,7 +11,7 @@ import PerfectNotifications
 extension NotificationPusher {
     static var jucai: NotificationPusher = {
         let n = NotificationPusher()
-        n.apnsTopic = "com.company.my-app"
+        n.apnsTopic = "com.sfdai.mifengjucai"
         return n
     }()
     
