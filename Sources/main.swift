@@ -6,43 +6,23 @@ import PerfectNet
 import SFMongo
 import Foundation
 
-// BEGIN one-time initialization code
-
 let configurationName = "My configuration name - can be whatever"
 
 NotificationPusher.addConfigurationIOS(name: configurationName) {
     (net:NetTCPSSL) in
+    net.keyFilePassword = ""
     
-    // This code will be called whenever a new connection to the APNS service is required.
-    // Configure the SSL related settings.
-    
-    net.keyFilePassword = "if you have password protected key file"
-    
-    guard net.useCertificateChainFile(cert: "path/to/entrust_2048_ca.cer") &&
-        net.useCertificateFile(cert: "path/to/aps_development.pem") &&
-        net.usePrivateKeyFile(cert: "path/to/key.pem") &&
+    guard net.useCertificateChainFile(cert: "./cert/entrust_2048_ca.cer") &&
+        net.useCertificateFile(cert: "./cert/push_development.pem") &&
+        net.usePrivateKeyFile(cert: "./cert/PrivateKeyFile.pem") &&
         net.checkPrivateKey() else {
-            
             let code = Int32(net.errorCode())
             print("Error validating private key file: \(net.errorStr(forCode: code))")
             return
     }
 }
 
-NotificationPusher.development = true // set to toggle to the APNS sandbox server
-
-// END one-time initialization code
-
-// BEGIN - individual notification push
-
-let deviceId = "hex string device id"
-let ary = [IOSNotificationItem.alertBody("This is the message"), IOSNotificationItem.sound("default")]
-let n = NotificationPusher()
-
-n.apnsTopic = "com.company.my-app"
-n.pushIOS(configurationName: configurationName, deviceToken: deviceId, expiration: 0, priority: 10, notificationItems: ary) { response in
-    print("NotificationResponse: \(response.status) \(response.body)")
-}
+NotificationPusher.development = true
 
 let server = HTTPServer()
 
@@ -50,27 +30,62 @@ var routes = Routes()
 
 routes.add(method: .post, uri: "/push/ios") { (request, response) in
     guard let bodyString = request.postBodyString else {
+        print("No Request Body")
         response.status = .badRequest
         response.completed()
         return
     }
     let json = JSON.parse(bodyString)
     guard let userTokens = json["userToken"].array, app = App(rawValue: json["app"].intValue), title = json["title"].string, body = json["body"].string, badge = json["badge"].int else {
+        print("Param not Enough")
         response.status = .badRequest
         response.completed()
         return
     }
-    var tokens = [String]()
-    for token in userTokens {
-        tokens.append(token.stringValue)
-    }
+    let tokens = userTokens.map{return $0.stringValue}
+    print(tokens)
     let date = Date()
     let notifications = tokens.map{return Notification.init(userToken: $0, app: app, title: title, body: body, badge: badge, time: date)}
-    n.pushIOS(configurationName: configurationName, deviceTokens: tokens, expiration: 0, priority: 10, notificationItems: [.alertBody(body), .alertTitle(title), .badge(badge)], callback: { (responses) in
-        <#code#>
+    notifications.forEach {
+        PushDBManager.shared.insert(notification: $0)
+        PushDBManager.shared.add(log: PushLog(notification: $0._id, action: .created, time: date))
+    }
+    let pusher: NotificationPusher
+    switch app {
+    case .蜜蜂聚财:
+        pusher = NotificationPusher.jucai
+    case .蜜蜂易车贷:
+        pusher = NotificationPusher.jucai
+    }
+    pusher.pushIOS(configurationName: configurationName, deviceTokens: tokens, expiration: 0, priority: 10, notificationItems: [.alertBody(body), .alertTitle(title), .badge(badge)], callback: { (responses) in
+        print(responses)
+        let time = Date()
+        var data = [String]()
+        for (index, response) in responses.enumerated() {
+            print("\(response.status) \(response.stringBody)")
+            let notification = notifications[index]
+            let para = [
+                "userToken": notification.userToken,
+                "status": response.status.description,
+                "message": response.stringBody
+            ]
+            data.append(para.jsonString)
+            switch response.status {
+            case .ok:
+                PushDBManager.shared.set(notification: notification._id, success: true)
+                PushDBManager.shared.add(log: PushLog(notification: notification._id, action: .finished, time: time))
+            case .custom(let code, let message):
+                print(code)
+                print(message)
+            default:
+                break
+            }
+        }
+        response.setHeader(HTTPResponseHeader.Name.contentType, value: "application/json")
+        response.setBody(string: "[" + data.joined(separator: ",") + "]")
+        response.completed()
     })
-    notifications.forEach{PushDBManager.shared.insert(notification: $0)}
-    response.completed()
+    
 }
 
 server.addRoutes(routes)
