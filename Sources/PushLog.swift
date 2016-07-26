@@ -11,7 +11,7 @@ import SFMongo
 
 enum PushAction: Int, JSONStringConvertible, BSONStringConvertible {
     case created
-    case sending
+//    case sending
     case finished
     case failed
     
@@ -38,6 +38,15 @@ struct PushLog: SFModel {
             throw SFMongoError.invalidData
         }
         self._id = id
+        self.notification = notification
+        self.action = action
+        self.time = time
+    }
+}
+
+extension PushLog {
+    init(notification: ObjectId, action: PushAction, time: Date) {
+        self._id = ObjectId.generate()
         self.notification = notification
         self.action = action
         self.time = time

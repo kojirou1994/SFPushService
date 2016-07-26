@@ -8,7 +8,6 @@
 
 import Foundation
 import SFMongo
-import Dispatch
 
 enum App: Int, BSONStringConvertible, JSONStringConvertible {
     case 蜜蜂聚财 = 100
@@ -62,6 +61,7 @@ extension Notification {
         self.title = title
         self.body = body
         self.app = app
+        self.badge = badge
         self.success = false
         self.time = time
     }

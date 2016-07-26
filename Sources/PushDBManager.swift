@@ -35,12 +35,14 @@ struct PushDBManager {
         _ = notiCol.save(document: try! BSON(json: notification.bsonString))
     }
     
-    func set(notification: String, success: Bool) {
-        let update = BSON()
-        _ = update.append(key: "succcess", bool: success)
+    func set(notification: ObjectId, success: Bool) {
+//        let update = BSON()
+//        _ = update.append(key: "success", bool: success)
+        let update = try! BSON(json: "{\"$set\": {\"success\": \(success)}}")
         let selector = BSON()
-        _ = selector.append(key: "_id", oid: ObjectId.parse(oid: notification))
-        _ = notiCol.update(update: update, selector: selector)
+        _ = selector.append(key: "_id", oid: ObjectId.parse(oid: notification.id))
+        let result = notiCol.update(update: update, selector: selector)
+        print(result)
     }
     
     func notification(_ forNotificationId: String) -> Notification? {
