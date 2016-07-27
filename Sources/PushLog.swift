@@ -31,6 +31,8 @@ struct PushLog: SFModel {
     
     var action: PushAction
     
+    var reason: String?
+    
     var time: Date
     
     init(json: JSON) throws {
@@ -41,15 +43,18 @@ struct PushLog: SFModel {
         self.notification = notification
         self.action = action
         self.time = time
+        self.reason = json["reason"].string
     }
 }
 
 extension PushLog {
-    init(notification: ObjectId, action: PushAction, time: Date) {
+    
+    init(notification: ObjectId, action: PushAction, time: Date, reason: String? = nil) {
         self._id = ObjectId.generate()
         self.notification = notification
         self.action = action
         self.time = time
+        self.reason = reason
     }
 }
 

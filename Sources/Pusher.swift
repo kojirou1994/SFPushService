@@ -12,7 +12,68 @@ import Foundation
 import PerfectNotifications
 
 class Pusher {
+    
     class func pushIOS(request: HTTPRequest, response: HTTPResponse) {
+        
+        guard let bodyString = request.postBodyString else {
+            print("No Request Body")
+            response.status = .badRequest
+            response.completed()
+            return
+        }
+        
+        let json = JSON.parse(bodyString)
+        guard let userToken = json["userToken"].string, app = App(rawValue: json["app"].intValue), title = json["title"].string, body = json["body"].string, badge = json["badge"].int else {
+            print("Param not Enough")
+            response.status = .badRequest
+            response.completed()
+            return
+        }
+        
+        let date = Date()
+        let pdb = PushDBManager.shared
+        let notification = Notification.init(userToken: userToken, app: app, title: title, body: body, badge: badge, time: date)
+        
+        pdb.insert(notification: notification)
+        pdb.add(log: PushLog(notification: notification._id, action: .created, time: date))
+        
+        let pusher: NotificationPusher
+        switch app {
+        case .蜜蜂聚财:
+            pusher = NotificationPusher.jucai
+        case .蜜蜂易车贷:
+            pusher = NotificationPusher.chedai
+        }
+        
+        pusher.pushIOS(configurationName: 蜜蜂聚财, deviceToken: userToken, expiration: 0, priority: 10, notificationItems: [.alertBody(body), .alertTitle(title), .badge(badge), .sound("default")]) { apnsRes in
+            let time = Date()
+            switch apnsRes.status {
+            case .ok:
+                pdb.set(notification: notification._id, success: true)
+                pdb.add(log: PushLog(notification: notification._id, action: .finished, time: time))
+            default:
+                print(apnsRes.status.description + apnsRes.stringBody)
+                print(apnsRes.jsonObjectBody["reason"] as? String)
+                pdb.add(log: PushLog(notification: notification._id, action: .failed, time: time, reason: apnsRes.jsonObjectBody["reason"] as? String))
+            }
+            
+            let para = [
+                "userToken": userToken,
+//                "status": apnsRes.status.description,s
+                "reason": apnsRes.jsonObjectBody["reason"]
+            ]
+            
+            response.status = apnsRes.status
+            response.setHeader(HTTPResponseHeader.Name.contentType, value: "application/json")
+            response.setBody(string: para.jsonString)
+            response.completed()
+            
+
+        }
+
+    }
+    
+    class func pushIOSGroup(request: HTTPRequest, response: HTTPResponse) {
         guard let bodyString = request.postBodyString else {
             print("No Request Body")
             response.status = .badRequest

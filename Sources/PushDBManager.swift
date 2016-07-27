@@ -56,6 +56,7 @@ struct PushDBManager {
     }
     
     func add(log: PushLog, retry: Int = 0) {
+        print("Inserting log \(log.bsonString)")
         let result = logCol.insert(document: try! BSON(json: log.bsonString))
         switch result {
         case .success:
