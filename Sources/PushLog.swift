@@ -36,7 +36,7 @@ struct PushLog: SFModel {
     var time: Date
     
     init(json: JSON) throws {
-        guard let id = json["_id"].oid, notification = json["notification"].oid, action = PushAction.init(rawValue: json["action"].intValue), time = json["time"].date else {
+        guard let id = json["_id"].oid, let notification = json["notification"].oid, let action = PushAction.init(rawValue: json["action"].intValue), let time = json["time"].date else {
             throw SFMongoError.invalidData
         }
         self._id = id

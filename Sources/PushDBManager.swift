@@ -26,6 +26,11 @@ struct PushDBManager {
         logCol = client.getCollection(databaseName: database, collectionName: "log")
         notiCol = client.getCollection(databaseName: database, collectionName: "notification")
     }
+}
+
+// MARK: - Notification
+
+extension PushDBManager {
     
     func insert(notification: Notification) {
         _ = notiCol.insert(document: try! BSON(json: notification.bsonString))
@@ -35,12 +40,10 @@ struct PushDBManager {
         _ = notiCol.save(document: try! BSON(json: notification.bsonString))
     }
     
-    func set(notification: ObjectId, success: Bool) {
-//        let update = BSON()
-//        _ = update.append(key: "success", bool: success)
+    func set(success: Bool, forNotification: ObjectId) {
         let update = try! BSON(json: "{\"$set\": {\"success\": \(success)}}")
         let selector = BSON()
-        _ = selector.append(key: "_id", oid: ObjectId.parse(oid: notification.id))
+        _ = selector.append(key: "_id", oid: ObjectId.parse(oid: forNotification.id))
         let result = notiCol.update(update: update, selector: selector)
         print(result)
     }
@@ -54,8 +57,13 @@ struct PushDBManager {
             return nil
         }
     }
+}
+
+// MARK: - Log
+
+extension PushDBManager {
     
-    func add(log: PushLog, retry: Int = 0) {
+    func insert(log: PushLog, retry: Int = 0) {
         print("Inserting log \(log.bsonString)")
         let result = logCol.insert(document: try! BSON(json: log.bsonString))
         switch result {
@@ -65,7 +73,7 @@ struct PushDBManager {
             print("Add Log Failed, Error Info: \(info)")
         default:
             if retry > 0 {
-                add(log: log, retry: retry - 1)
+                insert(log: log, retry: retry - 1)
             }
         }
     }
@@ -73,7 +81,11 @@ struct PushDBManager {
     func log(_ forLogId: String) -> PushLog? {
         let query = BSON()
         _ = query.append(key: "_id", oid: ObjectId.parse(oid: forLogId))
-        return logCol.find(query: query)?.map{return try? PushLog(json: JSON.parse($0.asString))}[0]
+        do {
+            return try logCol.find(query: query)?.map{return try PushLog(json: JSON.parse($0.asString))}[0]
+        }catch {
+            return nil
+        }
     }
     
     func logs(_ forNotification: String) -> [PushLog]? {

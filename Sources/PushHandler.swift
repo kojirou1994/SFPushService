@@ -1,5 +1,5 @@
 //
-//  Pusher.swift
+//  PushHandler.swift
 //  SFPushService
 //
 //  Created by Kojirou on 16/7/27.
@@ -7,11 +7,14 @@
 //
 
 import PerfectHTTP
+import PerfectHTTPServer
 import SFMongo
 import Foundation
 import PerfectNotifications
 
-class Pusher {
+typealias PushCompletionHandler = (NotificationResponse) -> ()
+
+class PushHandler {
     
     class func pushIOS(request: HTTPRequest, response: HTTPResponse) {
         
@@ -23,7 +26,7 @@ class Pusher {
         }
         
         let json = JSON.parse(bodyString)
-        guard let userToken = json["userToken"].string, app = App(rawValue: json["app"].intValue), title = json["title"].string, body = json["body"].string, badge = json["badge"].int else {
+        guard let userToken = json["userToken"].string, let app = App(rawValue: json["app"].intValue), let title = json["title"].string, let body = json["body"].string, let badge = json["badge"].int else {
             print("Param not Enough")
             response.status = .badRequest
             response.completed()
@@ -32,47 +35,36 @@ class Pusher {
         
         let date = Date()
         let pdb = PushDBManager.shared
-        let notification = Notification.init(userToken: userToken, app: app, title: title, body: body, badge: badge, time: date)
+        let notification = Notification(userToken: userToken, app: app, title: title, body: body, badge: badge, time: date)
         
         pdb.insert(notification: notification)
-        pdb.add(log: PushLog(notification: notification._id, action: .created, time: date))
+        pdb.insert(log: PushLog(notification: notification._id, action: .created, time: date))
         
-        let pusher: NotificationPusher
-        switch app {
-        case .蜜蜂聚财:
-            pusher = NotificationPusher.jucai
-        case .蜜蜂易车贷:
-            pusher = NotificationPusher.chedai
-        }
-        
-        pusher.pushIOS(configurationName: 蜜蜂聚财, deviceToken: userToken, expiration: 0, priority: 10, notificationItems: [.alertBody(body), .alertTitle(title), .badge(badge), .sound("default")]) { apnsRes in
-            let time = Date()
-            switch apnsRes.status {
+        PushHandler.pushToIOS(notification: notification) { apnsResponse in
+            let finishTime = Date()
+            switch apnsResponse.status {
             case .ok:
-                pdb.set(notification: notification._id, success: true)
-                pdb.add(log: PushLog(notification: notification._id, action: .finished, time: time))
+                pdb.set(success: true, forNotification: notification._id)
+                pdb.insert(log: PushLog(notification: notification._id, action: .finished, time: finishTime))
             default:
-                print(apnsRes.status.description + apnsRes.stringBody)
-                print(apnsRes.jsonObjectBody["reason"] as? String)
-                pdb.add(log: PushLog(notification: notification._id, action: .failed, time: time, reason: apnsRes.jsonObjectBody["reason"] as? String))
+                pdb.insert(log: PushLog(notification: notification._id, action: .failed, time: finishTime, reason: apnsResponse.jsonObjectBody["reason"] as? String))
             }
             
             let para = [
                 "userToken": userToken,
-//                "status": apnsRes.status.description,s
-                "reason": apnsRes.jsonObjectBody["reason"]
+                "notification_id": notification._id.id,
+                "reason": apnsResponse.jsonObjectBody["reason"]
             ]
             
-            response.status = apnsRes.status
+            response.status = apnsResponse.status
             response.setHeader(HTTPResponseHeader.Name.contentType, value: "application/json")
             response.setBody(string: para.jsonString)
             response.completed()
-            
-
         }
 
     }
     
+    /*
     class func pushIOSGroup(request: HTTPRequest, response: HTTPResponse) {
         guard let bodyString = request.postBodyString else {
             print("No Request Body")
@@ -81,7 +73,7 @@ class Pusher {
             return
         }
         let json = JSON.parse(bodyString)
-        guard let userTokens = json["userToken"].array, app = App(rawValue: json["app"].intValue), title = json["title"].string, body = json["body"].string, badge = json["badge"].int else {
+        guard let userTokens = json["userToken"].array, let app = App(rawValue: json["app"].intValue), let title = json["title"].string, let body = json["body"].string, let badge = json["badge"].int else {
             print("Param not Enough")
             response.status = .badRequest
             response.completed()
@@ -132,8 +124,46 @@ class Pusher {
         })
 
     }
+ */
     
     class func pushAndroid(request: HTTPRequest, response: HTTPResponse) {
         
+    }
+    
+    class func getIOSNoti(request: HTTPRequest, response: HTTPResponse) {
+        guard let id = request.urlVariables["id"] else {
+            response.completed()
+            return
+        }
+        if let notification = PushDBManager.shared.notification(id) {
+            response.addHeader(.contentType, value: "application/json")
+            response.setBody(string:  notification.response)
+        }else {
+            response.status = .notFound
+        }
+        print(response)
+        response.completed()
+    }
+    
+    private class func pushToAndroid(notification: Notification, completion: PushCompletionHandler) {
+        let net = HTTP2Client()
+        let path = "http://msg.umeng.com/api/send?sign"
+        let request = net.createRequest()
+        request.method = .post
+        request.path = path
+        
+    }
+    
+    private class func pushToIOS(notification: Notification, completion: PushCompletionHandler) {
+        
+        let pusher: NotificationPusher
+        switch notification.app {
+        case .蜜蜂聚财:
+            pusher = NotificationPusher.jucai
+        case .蜜蜂易车贷:
+            pusher = NotificationPusher.chedai
+        }
+        
+        pusher.pushIOS(configurationName: 蜜蜂聚财, deviceToken: notification.userToken, expiration: 0, priority: 10, notificationItems: notification.items, callback: completion)
     }
 }
