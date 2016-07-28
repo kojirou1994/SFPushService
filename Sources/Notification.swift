@@ -45,6 +45,12 @@ struct Notification: SFModel {
     var app: App
     
     var device: Device?
+
+    ///for Android
+    var ticker: String?
+    
+    ///additional info
+    var extra: Dictionary<String, String>
     
     var title: String
     
@@ -69,12 +75,18 @@ struct Notification: SFModel {
         self.success = success
         self.time = time
         self.device = Device(rawValue: json["device"].intValue)
+        self.ticker = json["ticker"].string
+        var extra = [String: String]()
+        for (key, value) in json["extra"].dictionaryValue {
+            extra[key] = value.jsonString
+        }
+        self.extra = extra
     }
 }
 
 extension Notification {
     
-    init(userToken: String, app: App, title: String, body: String, badge: Int, time: Date, device: Device? = nil) {
+    init(userToken: String, app: App, title: String, body: String, badge: Int, time: Date, device: Device? = nil, ticker: String? = nil, extra: Dictionary<String, String>) {
         self._id = ObjectId.generate()
         self.userToken = userToken
         self.title = title
@@ -84,24 +96,31 @@ extension Notification {
         self.success = false
         self.time = time
         self.device = device
+        self.ticker = ticker
+        self.extra = extra
     }
     
     var items: [IOSNotificationItem] {
         return [.alertBody(body), .alertTitle(title), .badge(badge), .sound("default")]
     }
-    
-    var response: String {
+}
+
+extension Notification: URLResponseRepresentable {
+    var responseDictionary: Dictionary<String, JSONStringConvertible?> {
         let logs = PushDBManager.shared.logs(_id.id) ?? []
-        let res: Dictionary<String, Any> = ["_id": _id,
-                                            "userToken": userToken,
-                                            "app": app,
-                                            "title": title,
-                                            "body": body,
-                                            "badge": badge,
-                                            "success": success,
-                                            "time": time,
-                                            "device": device,
-                                            "logs": logs]
-        return res.jsonString
+        let res: Dictionary<String, JSONStringConvertible?> = ["_id": _id,
+                                                               "userToken": userToken,
+                                                               "app": app,
+                                                               "ticker": ticker,
+                                                               "title": title,
+                                                               "body": body,
+                                                               "badge": badge,
+                                                               "success": success,
+                                                               "time": time,
+                                                               "device": device,
+                                                               "extra": extra,
+                                                               "logs": logs
+        ]
+        return res
     }
 }

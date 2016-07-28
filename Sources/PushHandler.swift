@@ -13,7 +13,11 @@ import Foundation
 import PerfectNotifications
 
 typealias PushCompletionHandler = (NotificationResponse) -> ()
-
+extension JSON: JSONStringConvertible {
+    public var jsonString: String {
+        return self.description
+    }
+}
 class PushHandler {
     
     class func pushIOS(request: HTTPRequest, response: HTTPResponse) {
@@ -35,7 +39,11 @@ class PushHandler {
         
         let date = Date()
         let pdb = PushDBManager.shared
-        let notification = Notification(userToken: userToken, app: app, title: title, body: body, badge: badge, time: date)
+        var extra = [String: String]()
+        for (key, value) in json["extra"].dictionaryValue {
+            extra[key] = value.jsonString
+        }
+        let notification = Notification(userToken: userToken, app: app, title: title, body: body, badge: badge, time: date,device: Device(rawValue: json["device"].intValue), ticker: json["ticker"].string, extra: extra)
         
         pdb.insert(notification: notification)
         pdb.insert(log: PushLog(notification: notification._id, action: .created, time: date))
@@ -137,20 +145,17 @@ class PushHandler {
         }
         if let notification = PushDBManager.shared.notification(id) {
             response.addHeader(.contentType, value: "application/json")
-            response.setBody(string:  notification.response)
+            response.setBody(string:  notification.responseBody)
         }else {
             response.status = .notFound
         }
         print(response)
         response.completed()
     }
-    
-    private class func pushToAndroid(notification: Notification, completion: PushCompletionHandler) {
-        let net = HTTP2Client()
-        let path = "http://msg.umeng.com/api/send?sign"
-        let request = net.createRequest()
-        request.method = .post
-        request.path = path
+
+    class func pushToAndroid(notification: Notification, completion: PushCompletionHandler) {
+
+//        task.resume()
         
     }
     
