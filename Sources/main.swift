@@ -27,15 +27,13 @@ let server = HTTPServer()
 
 var routes = Routes()
 
-routes.add(method: .post, uri: "/push/ios", handler: PushHandler.pushIOS)
+routes.add(method: .post, uri: "/push", handler: PushHandler.push)
 
-routes.add(method: .post, uri: "/push/android", handler: PushHandler.pushAndroid)
+routes.add(method: .get, uri: "/notification/{id}", handler: PushHandler.getNoti)
 
-routes.add(method: .get, uri: "/notification/{id}", handler: PushHandler.getIOSNoti)
+//routes.add(method: .get, uri: "/notification/{id}/log", handler: PushHandler.getNoti)
 
-routes.add(method: .get, uri: "/notification/{id}/log", handler: PushHandler.getIOSNoti)
-
-routes.add(method: .get, uri: "/log/{id}", handler: PushHandler.getIOSNoti)
+//routes.add(method: .get, uri: "/log/{id}", handler: PushHandler.getIOSNoti)
 
 server.addRoutes(routes)
 

@@ -44,7 +44,7 @@ struct Notification: SFModel {
     
     var app: App
     
-    var device: Device?
+    var device: Device
 
     ///for Android
     var ticker: String?
@@ -74,7 +74,7 @@ struct Notification: SFModel {
         self.badge = badge
         self.success = success
         self.time = time
-        self.device = Device(rawValue: json["device"].intValue)
+        self.device = Device(rawValue: json["device"].intValue)!
         self.ticker = json["ticker"].string
         var extra = [String: String]()
         for (key, value) in json["extra"].dictionaryValue {
@@ -86,7 +86,7 @@ struct Notification: SFModel {
 
 extension Notification {
     
-    init(userToken: String, app: App, title: String, body: String, badge: Int, time: Date, device: Device? = nil, ticker: String? = nil, extra: Dictionary<String, String>) {
+    init(userToken: String, app: App, title: String, body: String, badge: Int, time: Date, device: Device, ticker: String? = nil, extra: Dictionary<String, String>) {
         self._id = ObjectId.generate()
         self.userToken = userToken
         self.title = title

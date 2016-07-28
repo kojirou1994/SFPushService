@@ -60,7 +60,7 @@ class AndroidPusher {
     
     let notification: Notification
     
-    let deviceTokens: [String]
+//    let deviceTokens: [String]
     
     let type: PushType
     
@@ -68,22 +68,23 @@ class AndroidPusher {
     
     var pushParam: Dictionary<String, Any>
     
-    init(notification: Notification, deviceTokens: [String], type: PushType, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
+    init(notification: Notification, type: PushType, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
         self.notification = notification
-        self.deviceTokens = deviceTokens
+//        self.deviceTokens = deviceTokens
         self.type = type
         self.completion = completion
         self.pushParam = Dictionary<String, Any>()
     }
     
-    func push() throws {
+    func push() {
         
-        try verifyTokenCount()
+//        try verifyTokenCount()
         
         pushParam = [
             "timestamp": String(Date().timeIntervalSince1970),
             "type": type,
-            "device_tokens": deviceTokens.joined(separator: ","),
+//            "device_tokens": deviceTokens.joined(separator: ","),
+            "device_tokens": notification.userToken,
             "payload": [
                 "body": [
                     "ticker": notification.ticker ?? notification.title,
@@ -127,9 +128,9 @@ class AndroidPusher {
     }
     
     private func verifyTokenCount() throws {
-        if type.maxToken > 0 && deviceTokens.count > type.maxToken {
-            throw AndroidPusherError.overload
-        }
+//        if type.maxToken > 0 && deviceTokens.count > type.maxToken {
+//            throw AndroidPusherError.overload
+//        }
     }
     
     private func generateSign(path: String, bodyString: String) -> String {
