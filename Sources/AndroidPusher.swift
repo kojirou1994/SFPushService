@@ -44,11 +44,11 @@ let UmengCancelPath = "http://msg.umeng.com/api/cancel"
 
 let UmengUploadPath = "http://msg.umeng.com/api/upload"
 
-let UmengAppKey1 = ""
+let UmengAppKey1 = "56b1ce2567e58ecbc8003e2a"
 
 let UmengAppKey2 = ""
 
-let UmengAppMasterSecret1 = ""
+let UmengAppMasterSecret1 = "4fy7dgc8lhmnsbxc2vacc3gysbdrydgx"
 
 let UmengAppMasterSecret2 = ""
 
@@ -81,8 +81,9 @@ class AndroidPusher {
 //        try verifyTokenCount()
         
         pushParam = [
-            "timestamp": String(Date().timeIntervalSince1970),
-            "type": type,
+            "timestamp": Int(Date().timeIntervalSince1970),
+//            "type": type,
+            "type": "broadcast",
 //            "device_tokens": deviceTokens.joined(separator: ","),
             "device_tokens": notification.userToken,
             "payload": [
@@ -98,20 +99,27 @@ class AndroidPusher {
         
         switch notification.app {
         case .蜜蜂易车贷:
-            pushParam["appkey"] = UmengAppKey1
-        case .蜜蜂聚财:
             pushParam["appkey"] = UmengAppKey2
+        case .蜜蜂聚财:
+            pushParam["appkey"] = UmengAppKey1
         }
         
         let bodyStr = pushParam.jsonString
-        let sign = generateSign(path: UmengSendPath, bodyString: bodyStr)
+//        let bodyStr = "{\"device_tokens\": \"\",\"timestamp\": 1469702483,\"type\": \"broadcast\",\"payload\": {\"body\": {\"ticker\": \"未定义标题\",\"title\": \"你好\",\"text\": \"Nice to meet you\",\"after_open\": \"go_app\"},\"display_type\": \"notification\"},\"appkey\": \"56b1ce2567e58ecbc8003e2a\"}"
+//        print(getMD5(bodyStr))
         
+        let bodyData = bodyStr.data(using: .utf8)
+        let sign = generateSign(path: UmengSendPath, bodyString: String(data: bodyData!, encoding: .utf8)!)
+        print(sign)
         var request = URLRequest(url: URL(string: UmengSendPath + "?sign=" + sign)!)
         
         request.httpMethod = "POST"
-        request.httpBody = bodyStr.data(using: .utf8)
+        request.httpBody = bodyData
+        
+        print(getMD5(String(data: bodyData!, encoding: .utf8)!))
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            print(String(data: data!, encoding: .utf8))
             if error == nil && data != nil {
                 let json = JSON(data: data!)
                 if json["ret"].stringValue == "SUCCESS" {
@@ -138,13 +146,16 @@ class AndroidPusher {
         let masterSecret: String
         switch notification.app {
         case .蜜蜂易车贷:
-            masterSecret = UmengAppMasterSecret1
-        case .蜜蜂聚财:
             masterSecret = UmengAppMasterSecret2
+        case .蜜蜂聚财:
+            masterSecret = UmengAppMasterSecret1
         }
         let joined = method + path + bodyString + masterSecret
-        let md5 = getMD5(joined)
-        return md5
+        print("Calculating \(joined)")
+//        let md5 = getMD5(joined)
+//        print("Calculated \(md5)")
+        return joined.md5
+//        return "bfd20251e6579c9dd592268a78fea3b7"
     }
     
 }
