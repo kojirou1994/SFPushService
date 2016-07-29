@@ -14,9 +14,18 @@ import PerfectNotifications
 
 typealias PushCompletionHandler = (NotificationResponse) -> ()
 
-extension JSON: JSONStringConvertible {
-    public var jsonString: String {
-        return self.description
+extension JSON {
+    var extraDictionary: Dictionary<String, String>? {
+        
+        var extra = [String: String]()
+        
+        for (key, value) in self["extra"].dictionaryValue {
+            extra[key] = value.description
+        }
+        if extra.keys.count == 0 {
+            return nil
+        }
+        return extra
     }
 }
 
@@ -40,15 +49,13 @@ class PushHandler {
         }
         
         let date = Date()
-        let pdb = PushDBManager.shared
-        var extra = [String: String]()
-        for (key, value) in json["extra"].dictionaryValue {
-            extra[key] = value.jsonString
-        }
-        let notification = Notification(userToken: userToken, app: app, title: title, body: body, badge: badge, time: date,device: Device(rawValue: json["device"].intValue)!, ticker: json["ticker"].string, extra: extra)
+        let pdb = PushDBManager.default
+        
+        let notification = Notification(userToken: userToken, app: app, title: title, body: body, badge: badge, time: date,device: Device(rawValue: json["device"].intValue)!, ticker: json["ticker"].string, extra: json.extraDictionary)
         
         pdb.insert(notification: notification)
         pdb.insert(log: PushLog(notification: notification._id, action: .created, time: date))
+        
         switch notification.device {
         case .ios:
             PushHandler.pushToIOS(notification: notification) { apnsResponse in
@@ -77,7 +84,7 @@ class PushHandler {
                 let finishTime = Date()
                 if (succ) {
                     pdb.set(success: true, forNotification: notification._id)
-                    pdb.insert(log: PushLog(notification: notification._id, action: .finished, time: finishTime))
+                    pdb.insert(log: PushLog(notification: notification._id, action: .finished, time: finishTime, reason: msgId))
                 }else {
                     pdb.insert(log: PushLog(notification: notification._id, action: .failed, time: finishTime, reason: errorCode))
                 }
@@ -102,13 +109,15 @@ class PushHandler {
             response.completed()
             return
         }
-        if let notification = PushDBManager.shared.notification(id) {
+        
+        if let notification = PushDBManager.default.notification(id) {
             response.addHeader(.contentType, value: "application/json")
             response.setBody(string:  notification.responseBody)
         }else {
             response.status = .notFound
+            response.setBody(string: "Can not find the specific log.")
         }
-        print(response)
+//        print(response)
         response.completed()
     }
     

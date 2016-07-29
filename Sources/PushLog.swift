@@ -10,10 +10,10 @@ import Foundation
 import SFMongo
 
 enum PushAction: Int, JSONStringConvertible, BSONStringConvertible {
-    case created
+    case created = 0
 //    case sending
-    case finished
-    case failed
+    case finished = 1
+    case failed = 2
     
     var jsonString: String {
         return self.rawValue.description
@@ -39,6 +39,7 @@ struct PushLog: SFModel {
         guard let id = json["_id"].oid, let notification = json["notification"].oid, let action = PushAction.init(rawValue: json["action"].intValue), let time = json["time"].date else {
             throw SFMongoError.invalidData
         }
+        
         self._id = id
         self.notification = notification
         self.action = action

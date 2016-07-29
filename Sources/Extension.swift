@@ -21,7 +21,3 @@ extension NotificationPusher {
         return n
     }()
 }
-
-extension Notification {
-    
-}

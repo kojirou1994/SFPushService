@@ -38,7 +38,7 @@ private func rotateLeft(x: Word, by: Word) -> Word {
 
 // MARK: - Calculating a MD5 digest of bytes from bytes
 
-public func md5g(bytes: [Byte]) -> Digest {
+public func md5calculate(bytes: [Byte]) -> Digest {
     // Initialization
     let s: [Word] = [
         7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
@@ -222,7 +222,7 @@ extension String {
     
     public var md5Digest: [Byte] {
         let bytes = [Byte](self.utf8)
-        let digest = md5g(bytes: bytes)
+        let digest = md5calculate(bytes: bytes)
         return digest.digest
     }
 }

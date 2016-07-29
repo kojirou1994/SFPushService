@@ -17,6 +17,9 @@ enum PushType: String, JSONStringConvertible {
     ///列播
     case listcast = "listcast"
     
+    ///广播
+    case broadcast = "broadcast"
+    
     ///文件播
     case filecast = "filecast"
     
@@ -44,13 +47,13 @@ let UmengCancelPath = "http://msg.umeng.com/api/cancel"
 
 let UmengUploadPath = "http://msg.umeng.com/api/upload"
 
-let UmengAppKey1 = "56b1ce2567e58ecbc8003e2a"
+let UmengAppKeyJUCAI = "56b1ce2567e58ecbc8003e2a"
 
-let UmengAppKey2 = ""
+let UmengAppKeyCHEDAI = ""
 
-let UmengAppMasterSecret1 = "4fy7dgc8lhmnsbxc2vacc3gysbdrydgx"
+let UmengAppMasterSecretJUCAI = "4fy7dgc8lhmnsbxc2vacc3gysbdrydgx"
 
-let UmengAppMasterSecret2 = ""
+let UmengAppMasterSecretCHEDAI = ""
 
 enum AndroidPusherError: Error {
     case overload
@@ -66,14 +69,14 @@ class AndroidPusher {
     
     var completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())?
     
-    var pushParam: Dictionary<String, Any>
+    var pushParam: Dictionary<String, JSONStringConvertible>
     
     init(notification: Notification, type: PushType, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
         self.notification = notification
 //        self.deviceTokens = deviceTokens
         self.type = type
         self.completion = completion
-        self.pushParam = Dictionary<String, Any>()
+        self.pushParam = Dictionary<String, JSONStringConvertible>()
     }
     
     func push() {
@@ -82,8 +85,8 @@ class AndroidPusher {
         
         pushParam = [
             "timestamp": Int(Date().timeIntervalSince1970),
-//            "type": type,
-            "type": "broadcast",
+            "type": type,
+//            "type": "broadcast",
 //            "device_tokens": deviceTokens.joined(separator: ","),
             "device_tokens": notification.userToken,
             "payload": [
@@ -99,9 +102,9 @@ class AndroidPusher {
         
         switch notification.app {
         case .蜜蜂易车贷:
-            pushParam["appkey"] = UmengAppKey2
+            pushParam["appkey"] = UmengAppKeyCHEDAI
         case .蜜蜂聚财:
-            pushParam["appkey"] = UmengAppKey1
+            pushParam["appkey"] = UmengAppKeyJUCAI
         }
         
         let bodyStr = pushParam.jsonString
@@ -143,16 +146,13 @@ class AndroidPusher {
         let masterSecret: String
         switch notification.app {
         case .蜜蜂易车贷:
-            masterSecret = UmengAppMasterSecret2
+            masterSecret = UmengAppMasterSecretCHEDAI
         case .蜜蜂聚财:
-            masterSecret = UmengAppMasterSecret1
+            masterSecret = UmengAppMasterSecretJUCAI
         }
         let joined = method + path + bodyString + masterSecret
         print("Calculating \(joined)")
-//        let md5 = getMD5(joined)
-//        print("Calculated \(md5)")
         return joined.md5
-//        return "bfd20251e6579c9dd592268a78fea3b7"
     }
     
 }

@@ -17,7 +17,7 @@ struct PushDBManager {
     
     let notiCol: MongoCollection
     
-    static let shared = {
+    static let `default` = {
         return try! PushDBManager(mongodb: "mongodb://localhost", database: "Push")
     }()
     
@@ -52,7 +52,7 @@ extension PushDBManager {
         let query = BSON()
         _ = query.append(key: "_id", oid: ObjectId.parse(oid: forNotificationId))
         do {
-            return try notiCol.find(query: query)?.map{return try Notification(json: JSON.parse($0.asString))}[0]
+            return try notiCol.find(query: query)?.map{return try Notification(json: JSON.parse($0.asString))}.first
         }catch {
             return nil
         }
@@ -82,7 +82,7 @@ extension PushDBManager {
         let query = BSON()
         _ = query.append(key: "_id", oid: ObjectId.parse(oid: forLogId))
         do {
-            return try logCol.find(query: query)?.map{return try PushLog(json: JSON.parse($0.asString))}[0]
+            return try logCol.find(query: query)?.map{return try PushLog(json: JSON.parse($0.asString))}.first
         }catch {
             return nil
         }

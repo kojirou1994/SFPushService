@@ -45,12 +45,6 @@ struct Notification: SFModel {
     var app: App
     
     var device: Device
-
-    ///for Android
-    var ticker: String?
-    
-    ///additional info
-    var extra: Dictionary<String, String>
     
     var title: String
     
@@ -61,6 +55,12 @@ struct Notification: SFModel {
     var success: Bool
     
     var time: Date
+    
+    ///for Android Only
+    var ticker: String?
+    
+    ///additional info
+    var extra: Dictionary<String, String>?
     
     init(json: JSON) throws {
         guard let id = json["_id"].oid, let token = json["userToken"].string, let app = App(rawValue: json["app"].intValue), let title = json["title"].string, let body = json["body"].string, let badge = json["badge"].int, let success = json["success"].bool,let time = json["time"].date else {
@@ -76,17 +76,13 @@ struct Notification: SFModel {
         self.time = time
         self.device = Device(rawValue: json["device"].intValue)!
         self.ticker = json["ticker"].string
-        var extra = [String: String]()
-        for (key, value) in json["extra"].dictionaryValue {
-            extra[key] = value.jsonString
-        }
-        self.extra = extra
+        self.extra = json.extraDictionary
     }
 }
 
 extension Notification {
     
-    init(userToken: String, app: App, title: String, body: String, badge: Int, time: Date, device: Device, ticker: String? = nil, extra: Dictionary<String, String>) {
+    init(userToken: String, app: App, title: String, body: String, badge: Int, time: Date, device: Device, ticker: String? = nil, extra: Dictionary<String, String>? = nil) {
         self._id = ObjectId.generate()
         self.userToken = userToken
         self.title = title
@@ -105,9 +101,11 @@ extension Notification {
     }
 }
 
+// MARK: - URLResponseRepresentable
+
 extension Notification: URLResponseRepresentable {
     var responseDictionary: Dictionary<String, JSONStringConvertible?> {
-        let logs = PushDBManager.shared.logs(_id.id) ?? []
+        let logs = PushDBManager.default.logs(_id.id) ?? []
         let res: Dictionary<String, JSONStringConvertible?> = ["_id": _id,
                                                                "userToken": userToken,
                                                                "app": app,
