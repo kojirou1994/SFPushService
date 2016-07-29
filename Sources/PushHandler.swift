@@ -14,21 +14,6 @@ import PerfectNotifications
 
 typealias PushCompletionHandler = (NotificationResponse) -> ()
 
-extension JSON {
-    var extraDictionary: Dictionary<String, String>? {
-        
-        var extra = [String: String]()
-        
-        for (key, value) in self["extra"].dictionaryValue {
-            extra[key] = value.description
-        }
-        if extra.keys.count == 0 {
-            return nil
-        }
-        return extra
-    }
-}
-
 class PushHandler {
     
     class func push(request: HTTPRequest, response: HTTPResponse) {

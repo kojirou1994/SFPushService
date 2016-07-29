@@ -11,13 +11,13 @@ import SFMongo
 
 enum PushType: String, JSONStringConvertible {
     
-    ///单播
+    ///单播，只能一个设备
     case unicast = "unicast"
     
-    ///列播
+    ///列播，最多500个设备
     case listcast = "listcast"
     
-    ///广播
+    ///广播，全部
     case broadcast = "broadcast"
     
     ///文件播
@@ -71,10 +71,16 @@ class AndroidPusher {
     
     var pushParam: Dictionary<String, JSONStringConvertible>
     
-    init(notification: Notification, type: PushType, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
+    init(notification: Notification, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
         self.notification = notification
 //        self.deviceTokens = deviceTokens
-        self.type = type
+        if notification.userToken == "" {
+            self.type = .broadcast
+        }else if notification.userToken.characters.contains(",") {
+            self.type = .listcast
+        }else {
+            self.type = .unicast
+        }
         self.completion = completion
         self.pushParam = Dictionary<String, JSONStringConvertible>()
     }
@@ -119,7 +125,7 @@ class AndroidPusher {
         
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            print(String(data: data!, encoding: .utf8))
+//            print(String(data: data!, encoding: .utf8))
             if error == nil && data != nil {
                 let json = JSON(data: data!)
                 if json["ret"].stringValue == "SUCCESS" {
@@ -151,7 +157,7 @@ class AndroidPusher {
             masterSecret = UmengAppMasterSecretJUCAI
         }
         let joined = method + path + bodyString + masterSecret
-        print("Calculating \(joined)")
+//        print("Calculating \(joined)")
         return joined.md5
     }
     
