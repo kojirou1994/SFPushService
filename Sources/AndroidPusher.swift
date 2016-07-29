@@ -105,18 +105,15 @@ class AndroidPusher {
         }
         
         let bodyStr = pushParam.jsonString
-//        let bodyStr = "{\"device_tokens\": \"\",\"timestamp\": 1469702483,\"type\": \"broadcast\",\"payload\": {\"body\": {\"ticker\": \"未定义标题\",\"title\": \"你好\",\"text\": \"Nice to meet you\",\"after_open\": \"go_app\"},\"display_type\": \"notification\"},\"appkey\": \"56b1ce2567e58ecbc8003e2a\"}"
-//        print(getMD5(bodyStr))
         
         let bodyData = bodyStr.data(using: .utf8)
         let sign = generateSign(path: UmengSendPath, bodyString: String(data: bodyData!, encoding: .utf8)!)
-        print(sign)
+        
         var request = URLRequest(url: URL(string: UmengSendPath + "?sign=" + sign)!)
         
         request.httpMethod = "POST"
         request.httpBody = bodyData
         
-        print(getMD5(String(data: bodyData!, encoding: .utf8)!))
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             print(String(data: data!, encoding: .utf8))
