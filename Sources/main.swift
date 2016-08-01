@@ -8,6 +8,7 @@ import Foundation
 
 let 蜜蜂聚财 = "蜜蜂聚财"
 
+///设置蜜蜂聚财iOS推送证书，沙盒环境
 NotificationPusher.addConfigurationIOS(name: 蜜蜂聚财) {
     (net:NetTCPSSL) in
     
@@ -27,12 +28,19 @@ let server = HTTPServer()
 
 var routes = Routes()
 
+///推送API
 routes.add(method: .post, uri: "/push", handler: PushHandler.push)
 
+///查询指定推送信息API
 routes.add(method: .get, uri: "/notification/{id}", handler: PushHandler.getNoti)
 
+///按条件查询推送信息API
+routes.add(method: .get, uri: "/notification", handler: PushHandler.findNoti)
+
+///查询指定推送的日志API
 routes.add(method: .get, uri: "/notification/{id}/log", handler: PushHandler.getNotiLog)
 
+///查询指定日至信息API
 routes.add(method: .get, uri: "/log/{id}", handler: PushHandler.getLog)
 
 server.addRoutes(routes)
@@ -44,6 +52,7 @@ server.serverAddress = "127.0.0.1"
 server.documentRoot = "./webroot"
 
 do {
+    ///启动服务器
     try server.start()
 } catch PerfectError.networkError(let err, let msg) {
     print("Network error thrown: \(err) \(msg)")

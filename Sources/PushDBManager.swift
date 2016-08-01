@@ -40,19 +40,29 @@ extension PushDBManager {
         _ = notiCol.save(document: try! BSON(json: notification.bsonString))
     }
     
+    ///设置推送是否成功
     func set(success: Bool, forNotification: ObjectId) {
         let update = try! BSON(json: "{\"$set\": {\"success\": \(success)}}")
         let selector = BSON()
         _ = selector.append(key: "_id", oid: ObjectId.parse(oid: forNotification.id))
-        let result = notiCol.update(update: update, selector: selector)
-        print(result)
+        _ = notiCol.update(update: update, selector: selector)
     }
     
+    ///获取指定Notification
     func notification(_ forNotificationId: String) -> Notification? {
         let query = BSON()
         _ = query.append(key: "_id", oid: ObjectId.parse(oid: forNotificationId))
         do {
             return try notiCol.find(query: query)?.map{return try Notification(json: JSON.parse($0.asString))}.first
+        }catch {
+            return nil
+        }
+    }
+    
+    ///根据query查询Notification
+    func notifications(_ query: BSON) -> [Notification]? {
+        do {
+            return try notiCol.find(query: query)?.map{return try Notification(json: JSON.parse($0.asString))}
         }catch {
             return nil
         }
@@ -63,21 +73,13 @@ extension PushDBManager {
 
 extension PushDBManager {
     
+    ///插入日志
     func insert(log: PushLog, retry: Int = 0) {
-        print("Inserting log \(log.bsonString)")
-        let result = logCol.insert(document: try! BSON(json: log.bsonString))
-        switch result {
-        case .success:
-            return
-        case .error(_, _, let info):
-            print("Add Log Failed, Error Info: \(info)")
-        default:
-            if retry > 0 {
-                insert(log: log, retry: retry - 1)
-            }
-        }
+        print("[Log] \(log.bsonString)")
+        _ = logCol.insert(document: try! BSON(json: log.bsonString))
     }
     
+    ///获取指定日志
     func log(_ forLogId: String) -> PushLog? {
         let query = BSON()
         _ = query.append(key: "_id", oid: ObjectId.parse(oid: forLogId))
@@ -88,6 +90,7 @@ extension PushDBManager {
         }
     }
     
+    ///获取指定Notification关联日志
     func logs(_ forNotification: String) -> [PushLog]? {
         let query = BSON()
         _ = query.append(key: "notification", oid: ObjectId.parse(oid: forNotification))

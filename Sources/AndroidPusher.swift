@@ -27,7 +27,7 @@ enum PushType: String, JSONStringConvertible {
         return self.rawValue
     }
     
-    var maxToken: Int {
+    var maxTokenCount: Int {
         switch self {
         case .unicast:
             return 1
@@ -63,8 +63,6 @@ class AndroidPusher {
     
     let notification: Notification
     
-//    let deviceTokens: [String]
-    
     let type: PushType
     
     var completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())?
@@ -73,7 +71,6 @@ class AndroidPusher {
     
     init(notification: Notification, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
         self.notification = notification
-//        self.deviceTokens = deviceTokens
         if notification.userToken == "" {
             self.type = .broadcast
         }else if notification.userToken.characters.contains(",") {
@@ -86,14 +83,15 @@ class AndroidPusher {
     }
     
     func push() {
-        
-//        try verifyTokenCount()
+        do {
+            try verifyTokenCount()
+        }catch {
+            self.completion?(succ: false, msgId: nil, errorCode: "Too many tokens")
+        }
         
         pushParam = [
             "timestamp": Int(Date().timeIntervalSince1970),
             "type": type,
-//            "type": "broadcast",
-//            "device_tokens": deviceTokens.joined(separator: ","),
             "device_tokens": notification.userToken,
             "payload": [
                 "body": [
@@ -125,7 +123,6 @@ class AndroidPusher {
         
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
-//            print(String(data: data!, encoding: .utf8))
             if error == nil && data != nil {
                 let json = JSON(data: data!)
                 if json["ret"].stringValue == "SUCCESS" {
@@ -141,10 +138,13 @@ class AndroidPusher {
         task.resume()
     }
     
+    ///检察tokencount没有超出上限
     private func verifyTokenCount() throws {
-//        if type.maxToken > 0 && deviceTokens.count > type.maxToken {
-//            throw AndroidPusherError.overload
-//        }
+        let tokenCount = notification.userToken.components(separatedBy: ",").count
+        let maxCount = type.maxTokenCount
+        if  maxCount > 0 && tokenCount > maxCount {
+            throw AndroidPusherError.overload
+        }
     }
     
     private func generateSign(path: String, bodyString: String) -> String {
@@ -157,7 +157,6 @@ class AndroidPusher {
             masterSecret = UmengAppMasterSecretJUCAI
         }
         let joined = method + path + bodyString + masterSecret
-//        print("Calculating \(joined)")
         return joined.md5
     }
     

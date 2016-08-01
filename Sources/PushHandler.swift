@@ -11,21 +11,24 @@ import PerfectHTTPServer
 import SFMongo
 import Foundation
 import PerfectNotifications
+import MongoDB
 
 typealias PushCompletionHandler = (NotificationResponse) -> ()
 
 class PushHandler {
     
     class func push(request: HTTPRequest, response: HTTPResponse) {
-        
+        //检查请求是否为空
         guard let bodyString = request.postBodyString else {
             print("No Request Body")
             response.status = .badRequest
             response.completed()
             return
         }
-        
+        //将请求body转换为JSON对象
         let json = JSON.parse(bodyString)
+
+        //检查必须的参数是否提交
         guard let userToken = json["userToken"].string, let app = App(rawValue: json["app"].intValue), let title = json["title"].string, let body = json["body"].string, let badge = json["badge"].int else {
             print("Param not Enough")
             response.status = .badRequest
@@ -41,6 +44,7 @@ class PushHandler {
         pdb.insert(notification: notification)
         pdb.insert(log: PushLog(notification: notification._id, action: .created, time: date))
         
+        //根据不同设备使用不同的接口进行推送
         switch notification.device {
         case .ios:
             PushHandler.pushToIOS(notification: notification) { apnsResponse in
@@ -80,7 +84,7 @@ class PushHandler {
                 ]
                 
                 response.status = succ ? .ok : .badRequest
-                response.setHeader(HTTPResponseHeader.Name.contentType, value: "application/json")
+                response.setHeader(.contentType, value: "application/json")
                 response.setBody(string: para.jsonString)
                 response.completed()
             })
@@ -133,6 +137,39 @@ class PushHandler {
             response.setBody(string: "Can not find the specific notification.")
         }
 //        print(response)
+        response.completed()
+    }
+    
+    class func findNoti(request: HTTPRequest, response: HTTPResponse) {
+        let query = BSON()
+        if let param = request.param(name: "app") {
+            if let app = Int(param) {
+                query.append(key: "app", int: app)
+            }
+        }
+        if let param = request.param(name: "device") {
+            if let device = Int(param) {
+                query.append(key: "device", int: device)
+            }
+        }
+        if let param = request.param(name: "maxtime") {
+            if param.characters.count == 13, let _ = Int(param) {
+                query.append(key: "time", document: try! BSON(json: "{\"$lt\": {\"$date\": \(param)} }"))
+            }
+        }
+        if let param = request.param(name: "mintime") {
+            if param.characters.count == 13, let _ = Int(param) {
+                query.append(key: "time", document: try! BSON(json: "{\"$gt\": {\"$date\": \(param)} }"))
+            }
+        }
+        print(query.asString)
+        if let notifications = PushDBManager.default.notifications(query) {
+            response.addHeader(.contentType, value: "application/json")
+            response.setBody(string:  notifications.jsonString)
+        }else {
+            response.status = .notFound
+            response.setBody(string: "Can not find the specific notification.")
+        }
         response.completed()
     }
     

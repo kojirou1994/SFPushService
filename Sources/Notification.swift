@@ -38,22 +38,32 @@ enum Device: Int, BSONStringConvertible, JSONStringConvertible {
 
 
 struct Notification: SFModel {
+
+    /// MongoDB ID
     var _id: ObjectId
     
+    ///推送目标token
     var userToken: String
     
+    ///指定推送app
     var app: App
     
+    ///推送设备类型
     var device: Device
     
+    ///推送通知标题
     var title: String
     
+    ///推送通知主体内容
     var body: String
     
+    ///iOS角标
     var badge: Int
     
+    ///是否推送成功
     var success: Bool
     
+    ///请求时间
     var time: Date
     
     ///for Android Only

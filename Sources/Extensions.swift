@@ -25,6 +25,8 @@ public extension NotificationPusher {
 }
 
 public extension JSON {
+
+    ///获取自定义信息
     public var extraDictionary: Dictionary<String, String>? {
         
         var extra = [String: String]()
@@ -32,6 +34,7 @@ public extension JSON {
         for (key, value) in self["extra"].dictionaryValue {
             extra[key] = value.description
         }
+        
         if extra.keys.count == 0 {
             return nil
         }
