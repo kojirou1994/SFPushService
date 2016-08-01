@@ -65,7 +65,7 @@ class PushHandler {
                 response.completed()
             }
         case .android:
-            let p = AndroidPusher(notification: notification, type: .unicast, completion: { (succ, msgId, errorCode) in
+            let p = AndroidPusher(notification: notification, completion: { (succ, msgId, errorCode) in
                 let finishTime = Date()
                 if (succ) {
                     pdb.set(success: true, forNotification: notification._id)
@@ -89,6 +89,36 @@ class PushHandler {
         
     }
     
+    class func getLog(request: HTTPRequest, response: HTTPResponse) {
+        guard let id = request.urlVariables["id"] else {
+            response.completed()
+            return
+        }
+        if let log = PushDBManager.default.log(id) {
+            response.addHeader(.contentType, value: "application/json")
+            response.setBody(string:  log.jsonString)
+        }else {
+            response.status = .notFound
+            response.setBody(string: "Can not find the specific log.")
+        }
+        response.completed()
+    }
+    
+    class func getNotiLog(request: HTTPRequest, response: HTTPResponse) {
+        guard let id = request.urlVariables["id"] else {
+            response.completed()
+            return
+        }
+        if let logs = PushDBManager.default.logs(id) {
+            response.addHeader(.contentType, value: "application/json")
+            response.setBody(string:  logs.jsonString)
+        }else {
+            response.status = .notFound
+            response.setBody(string: "Can not find the specific logs.")
+        }
+        response.completed()
+    }
+    
     class func getNoti(request: HTTPRequest, response: HTTPResponse) {
         guard let id = request.urlVariables["id"] else {
             response.completed()
@@ -100,7 +130,7 @@ class PushHandler {
             response.setBody(string:  notification.responseBody)
         }else {
             response.status = .notFound
-            response.setBody(string: "Can not find the specific log.")
+            response.setBody(string: "Can not find the specific notification.")
         }
 //        print(response)
         response.completed()
