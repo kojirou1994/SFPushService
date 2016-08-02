@@ -8,6 +8,7 @@
 
 import Foundation
 import SFMongo
+import Models
 
 enum PushType: String, JSONStringConvertible {
     
@@ -39,29 +40,13 @@ enum PushType: String, JSONStringConvertible {
     }
 }
 
-let UmengSendPath = "http://msg.umeng.com/api/send"
-
-let UmengStatusPath = "http://msg.umeng.com/api/status"
-
-let UmengCancelPath = "http://msg.umeng.com/api/cancel"
-
-let UmengUploadPath = "http://msg.umeng.com/api/upload"
-
-let UmengAppKeyJUCAI = "56b1ce2567e58ecbc8003e2a"
-
-let UmengAppKeyCHEDAI = ""
-
-let UmengAppMasterSecretJUCAI = "4fy7dgc8lhmnsbxc2vacc3gysbdrydgx"
-
-let UmengAppMasterSecretCHEDAI = ""
-
 enum AndroidPusherError: Error {
     case overload
 }
 
 class AndroidPusher {
     
-    let notification: Notification
+    let notification: Models.Notification
     
     let type: PushType
     
@@ -69,7 +54,7 @@ class AndroidPusher {
     
     var pushParam: Dictionary<String, JSONStringConvertible>
     
-    init(notification: Notification, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
+    init(notification: Models.Notification, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
         self.notification = notification
         if notification.userToken == "" {
             self.type = .broadcast
@@ -106,21 +91,20 @@ class AndroidPusher {
         
         switch notification.app {
         case .蜜蜂易车贷:
-            pushParam["appkey"] = UmengAppKeyCHEDAI
+            pushParam["appkey"] = UmengAppKey.chedai
         case .蜜蜂聚财:
-            pushParam["appkey"] = UmengAppKeyJUCAI
+            pushParam["appkey"] = UmengAppKey.jucai
         }
         
         let bodyStr = pushParam.jsonString
         
         let bodyData = bodyStr.data(using: .utf8)
-        let sign = generateSign(path: UmengSendPath, bodyString: String(data: bodyData!, encoding: .utf8)!)
+        let sign = generateSign(path: UmengPath.send, bodyString: String(data: bodyData!, encoding: .utf8)!)
         
-        var request = URLRequest(url: URL(string: UmengSendPath + "?sign=" + sign)!)
+        var request = URLRequest(url: URL(string: UmengPath.send + "?sign=" + sign)!)
         
         request.httpMethod = "POST"
         request.httpBody = bodyData
-        
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if error == nil && data != nil {
@@ -152,9 +136,9 @@ class AndroidPusher {
         let masterSecret: String
         switch notification.app {
         case .蜜蜂易车贷:
-            masterSecret = UmengAppMasterSecretCHEDAI
+            masterSecret = UmengAppMasterSecret.chedai
         case .蜜蜂聚财:
-            masterSecret = UmengAppMasterSecretJUCAI
+            masterSecret = UmengAppMasterSecret.jucai
         }
         let joined = method + path + bodyString + masterSecret
         return joined.md5

@@ -5,6 +5,7 @@ import PerfectLib
 import PerfectNet
 import SFMongo
 import Foundation
+import Handlers
 
 let 蜜蜂聚财 = "蜜蜂聚财"
 

@@ -8,6 +8,7 @@
 
 import MongoDB
 import SFMongo
+import Models
 
 struct PushDBManager {
     

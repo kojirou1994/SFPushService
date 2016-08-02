@@ -9,22 +9,22 @@
 import Foundation
 import SFMongo
 
-enum PushAction: Int, JSONStringConvertible, BSONStringConvertible {
+public enum PushAction: Int, JSONStringConvertible, BSONStringConvertible {
     case created = 0
 //    case sending
     case finished = 1
     case failed = 2
     
-    var jsonString: String {
+    public var jsonString: String {
         return self.rawValue.description
     }
     
-    var bsonString: String {
+    public var bsonString: String {
         return self.jsonString
     }
 }
 
-struct PushLog: SFModel {
+public struct PushLog: SFModel {
     var _id: ObjectId
     
     var notification: ObjectId
@@ -35,7 +35,7 @@ struct PushLog: SFModel {
     
     var time: Date
     
-    init(json: JSON) throws {
+    public init(json: JSON) throws {
         guard let id = json["_id"].oid, let notification = json["notification"].oid, let action = PushAction.init(rawValue: json["action"].intValue), let time = json["time"].date else {
             throw SFMongoError.invalidData
         }
@@ -50,7 +50,7 @@ struct PushLog: SFModel {
 
 extension PushLog {
     
-    init(notification: ObjectId, action: PushAction, time: Date, reason: String? = nil) {
+    public init(notification: ObjectId, action: PushAction, time: Date, reason: String? = nil) {
         self._id = ObjectId.generate()
         self.notification = notification
         self.action = action

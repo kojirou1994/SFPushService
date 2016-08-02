@@ -12,12 +12,13 @@ import SFMongo
 import Foundation
 import PerfectNotifications
 import MongoDB
+import Models
 
 typealias PushCompletionHandler = (NotificationResponse) -> ()
 
-class PushHandler {
+public class PushHandler {
     
-    class func push(request: HTTPRequest, response: HTTPResponse) {
+    public class func push(request: HTTPRequest, response: HTTPResponse) {
         //检查请求是否为空
         guard let bodyString = request.postBodyString else {
             print("No Request Body")
@@ -93,7 +94,7 @@ class PushHandler {
         
     }
     
-    class func getLog(request: HTTPRequest, response: HTTPResponse) {
+    public class func getLog(request: HTTPRequest, response: HTTPResponse) {
         guard let id = request.urlVariables["id"] else {
             response.completed()
             return
@@ -108,7 +109,7 @@ class PushHandler {
         response.completed()
     }
     
-    class func getNotiLog(request: HTTPRequest, response: HTTPResponse) {
+    public class func getNotiLog(request: HTTPRequest, response: HTTPResponse) {
         guard let id = request.urlVariables["id"] else {
             response.completed()
             return
@@ -123,7 +124,7 @@ class PushHandler {
         response.completed()
     }
     
-    class func getNoti(request: HTTPRequest, response: HTTPResponse) {
+    public class func getNoti(request: HTTPRequest, response: HTTPResponse) {
         guard let id = request.urlVariables["id"] else {
             response.completed()
             return
@@ -140,7 +141,7 @@ class PushHandler {
         response.completed()
     }
     
-    class func findNoti(request: HTTPRequest, response: HTTPResponse) {
+    public class func findNoti(request: HTTPRequest, response: HTTPResponse) {
         let query = BSON()
         if let param = request.param(name: "app") {
             if let app = Int(param) {
@@ -173,7 +174,7 @@ class PushHandler {
         response.completed()
     }
     
-    private class func pushToIOS(notification: Notification, completion: PushCompletionHandler) {
+    private class func pushToIOS(notification: Models.Notification, completion: PushCompletionHandler) {
         
         let pusher: NotificationPusher
         switch notification.app {
@@ -183,6 +184,6 @@ class PushHandler {
             pusher = NotificationPusher.chedai
         }
         
-        pusher.pushIOS(configurationName: 蜜蜂聚财, deviceToken: notification.userToken, expiration: 0, priority: 10, notificationItems: notification.items, callback: completion)
+        pusher.pushIOS(configurationName: "蜜蜂聚财", deviceToken: notification.userToken, expiration: 0, priority: 10, notificationItems: notification.items, callback: completion)
     }
 }
