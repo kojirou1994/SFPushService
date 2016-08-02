@@ -10,9 +10,14 @@ import Foundation
 import SFMongo
 
 public enum PushAction: Int, JSONStringConvertible, BSONStringConvertible {
+    
+    ///创建
     case created = 0
-//    case sending
+    
+    ///发送完成
     case finished = 1
+    
+    ///发送失败
     case failed = 2
     
     public var jsonString: String {

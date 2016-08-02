@@ -14,8 +14,6 @@ import PerfectNotifications
 import MongoDB
 import Models
 
-typealias PushCompletionHandler = (NotificationResponse) -> ()
-
 public class PushHandler {
     
     public class func push(request: HTTPRequest, response: HTTPResponse) {
@@ -46,50 +44,27 @@ public class PushHandler {
         pdb.insert(log: PushLog(notification: notification._id, action: .created, time: date))
         
         //根据不同设备使用不同的接口进行推送
-        switch notification.device {
-        case .ios:
-            PushHandler.pushToIOS(notification: notification) { apnsResponse in
-                let finishTime = Date()
-                switch apnsResponse.status {
-                case .ok:
-                    pdb.set(success: true, forNotification: notification._id)
-                    pdb.insert(log: PushLog(notification: notification._id, action: .finished, time: finishTime))
-                default:
-                    pdb.insert(log: PushLog(notification: notification._id, action: .failed, time: finishTime, reason: apnsResponse.jsonObjectBody["reason"] as? String))
-                }
-                
-                let para = [
-                    "userToken": userToken,
-                    "notification_id": notification._id.id,
-                    "reason": apnsResponse.jsonObjectBody["reason"]
-                ]
-                
-                response.status = apnsResponse.status
-                response.setHeader(HTTPResponseHeader.Name.contentType, value: "application/json")
-                response.setBody(string: para.jsonString)
-                response.completed()
+        notification.push { apnsResponse, message in
+            let finishTime = Date()
+            switch apnsResponse.status {
+            case .ok:
+                pdb.set(success: true, forNotification: notification._id)
+                pdb.insert(log: PushLog(notification: notification._id, action: .finished, time: finishTime))
+            default:
+                pdb.insert(log: PushLog(notification: notification._id, action: .failed, time: finishTime, reason: message))
             }
-        case .android:
-            let p = AndroidPusher(notification: notification, completion: { (succ, msgId, errorCode) in
-                let finishTime = Date()
-                if (succ) {
-                    pdb.set(success: true, forNotification: notification._id)
-                    pdb.insert(log: PushLog(notification: notification._id, action: .finished, time: finishTime, reason: msgId))
-                }else {
-                    pdb.insert(log: PushLog(notification: notification._id, action: .failed, time: finishTime, reason: errorCode))
-                }
-                let para = [
-                    "userToken": userToken,
-                    "notification_id": notification._id.id,
-                    "reason": errorCode ?? "Null"
-                ]
-                
-                response.status = succ ? .ok : .badRequest
-                response.setHeader(.contentType, value: "application/json")
-                response.setBody(string: para.jsonString)
-                response.completed()
-            })
-            p.push()
+            
+            let para = [
+                "userToken": userToken,
+                "notification_id": notification._id.id,
+                "reason": message
+            ]
+            
+            response.status = apnsResponse.status
+            response.setHeader(HTTPResponseHeader.Name.contentType, value: "application/json")
+            response.setBody(string: para.jsonString)
+            response.completed()
+
         }
         
     }
@@ -137,7 +112,6 @@ public class PushHandler {
             response.status = .notFound
             response.setBody(string: "Can not find the specific notification.")
         }
-//        print(response)
         response.completed()
     }
     
@@ -163,7 +137,6 @@ public class PushHandler {
                 query.append(key: "time", document: try! BSON(json: "{\"$gt\": {\"$date\": \(param)} }"))
             }
         }
-        print(query.asString)
         if let notifications = PushDBManager.default.notifications(query) {
             response.addHeader(.contentType, value: "application/json")
             response.setBody(string:  notifications.jsonString)
@@ -173,17 +146,20 @@ public class PushHandler {
         }
         response.completed()
     }
-    
-    private class func pushToIOS(notification: Models.Notification, completion: PushCompletionHandler) {
-        
-        let pusher: NotificationPusher
-        switch notification.app {
-        case .蜜蜂聚财:
-            pusher = NotificationPusher.jucai
-        case .蜜蜂易车贷:
-            pusher = NotificationPusher.chedai
+
+}
+
+
+extension Models.Notification {
+    func push(completion: PushCompletionHandler? = nil) {
+        let pusher: Pushable
+        switch device {
+        case .ios:
+            pusher = NativeIOSPusher(notification: self, completion: completion)
+        case .android:
+            pusher = AndroidPusher(notification: self, completion: completion)
         }
-        
-        pusher.pushIOS(configurationName: "蜜蜂聚财", deviceToken: notification.userToken, expiration: 0, priority: 10, notificationItems: notification.items, callback: completion)
+        pusher.push()
+
     }
 }

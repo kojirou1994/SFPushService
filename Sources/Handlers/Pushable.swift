@@ -7,9 +7,19 @@
 //
 
 import Foundation
+import Models
+import PerfectNotifications
 
-public protocol Pushable {
-    //    var notification: Models.Notification
+typealias PushCompletionHandler = (NotificationResponse, message: String?) -> ()
+
+protocol Pushable {
+    
+    var notification: Models.Notification {get}
+    
+    var completion: PushCompletionHandler? {get set}
+    
+    init(notification: Models.Notification, completion: PushCompletionHandler?)
+    
     func push()
     
 }

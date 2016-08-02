@@ -21,7 +21,7 @@ extension URLResponseRepresentable {
     }
 }
 
-// MARK: - URLResponseRepresentable
+// MARK: - Models.Notification
 
 extension Models.Notification: URLResponseRepresentable {
     var responseDictionary: Dictionary<String, JSONStringConvertible?> {

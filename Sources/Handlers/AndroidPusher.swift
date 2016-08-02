@@ -9,71 +9,81 @@
 import Foundation
 import SFMongo
 import Models
-
-enum PushType: String, JSONStringConvertible {
-    
-    ///单播，只能一个设备
-    case unicast = "unicast"
-    
-    ///列播，最多500个设备
-    case listcast = "listcast"
-    
-    ///广播，全部
-    case broadcast = "broadcast"
-    
-    ///文件播
-    case filecast = "filecast"
-    
-    var jsonString: String {
-        return self.rawValue
-    }
-    
-    var maxTokenCount: Int {
-        switch self {
-        case .unicast:
-            return 1
-        case .listcast:
-            return 500
-        default:
-            return 0
-        }
-    }
-}
+import PerfectNotifications
+import PerfectHTTP
 
 enum AndroidPusherError: Error {
     case overload
 }
 
-class AndroidPusher {
+extension NotificationResponse {
+    init(status: HTTPResponseStatus, body: [UInt8]) {
+        self.status = status
+        self.body = body
+    }
+}
+
+final class AndroidPusher: Pushable {
     
     let notification: Models.Notification
     
-    let type: PushType
+    var completion: PushCompletionHandler?
     
-    var completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())?
+    let type: UmengAndroidPushType
     
     var pushParam: Dictionary<String, JSONStringConvertible>
     
-    init(notification: Models.Notification, completion: ((succ: Bool, msgId: String?, errorCode: String?) -> ())? = nil) {
+    init(notification: Models.Notification, completion: PushCompletionHandler? = nil) {
         self.notification = notification
-        if notification.userToken == "" {
-            self.type = .broadcast
-        }else if notification.userToken.characters.contains(",") {
-            self.type = .listcast
-        }else {
-            self.type = .unicast
-        }
+        self.type = UmengAndroidPushType(token: notification.userToken)
         self.completion = completion
         self.pushParam = Dictionary<String, JSONStringConvertible>()
     }
     
     func push() {
-        do {
-            try verifyTokenCount()
-        }catch {
-            self.completion?(succ: false, msgId: nil, errorCode: "Too many tokens")
+
+        setRequestParam()
+        
+        if let bodyData = pushParam.jsonString.data(using: .utf8) {
+            
+            let sign = generateSign(path: UmengPath.send, bodyString: String(data: bodyData, encoding: .utf8)!)
+            
+            var request = URLRequest(url: URL(string: UmengPath.send + "?sign=" + sign)!)
+            request.httpMethod = "POST"
+            request.httpBody = bodyData
+            
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                let re: NotificationResponse
+                if error == nil, let data = data, let response = response as? HTTPURLResponse {
+                    re = NotificationResponse(status: HTTPResponseStatus.statusFrom(code: response.statusCode), body: [UInt8](data))
+                    let json = JSON(data: data)
+                    if json["ret"].stringValue == "SUCCESS" {
+                        self.completion?(re, message: json["data"]["msg_id"].string)
+                        return
+                    }else {
+                        self.completion?(re, message: json["data"]["error_code"].string)
+                        return
+                    }
+                }else {
+                    self.fail()
+                }
+            }
+            
+            task.resume()
+        }else {
+            self.fail()
         }
         
+    }
+    
+    ///发送失败
+    private func fail() {
+        let re = NotificationResponse(status: HTTPResponseStatus.badRequest, body: [UInt8]())
+        completion?(re, message: nil)
+    }
+    
+    ///设置请求参数
+    private func setRequestParam() {
         pushParam = [
             "timestamp": Int(Date().timeIntervalSince1970),
             "type": type,
@@ -95,42 +105,9 @@ class AndroidPusher {
         case .蜜蜂聚财:
             pushParam["appkey"] = UmengAppKey.jucai
         }
-        
-        let bodyStr = pushParam.jsonString
-        
-        let bodyData = bodyStr.data(using: .utf8)
-        let sign = generateSign(path: UmengPath.send, bodyString: String(data: bodyData!, encoding: .utf8)!)
-        
-        var request = URLRequest(url: URL(string: UmengPath.send + "?sign=" + sign)!)
-        
-        request.httpMethod = "POST"
-        request.httpBody = bodyData
-        
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
-            if error == nil && data != nil {
-                let json = JSON(data: data!)
-                if json["ret"].stringValue == "SUCCESS" {
-                    self.completion?(succ: true, msgId: json["data"]["msg_id"].string, errorCode: nil)
-                    return
-                }else {
-                    self.completion?(succ: false, msgId: nil, errorCode: json["data"]["error_code"].string)
-                    return
-                }
-            }
-            self.completion?(succ: false, msgId: nil, errorCode: nil)
-        }
-        task.resume()
     }
     
-    ///检察tokencount没有超出上限
-    private func verifyTokenCount() throws {
-        let tokenCount = notification.userToken.components(separatedBy: ",").count
-        let maxCount = type.maxTokenCount
-        if  maxCount > 0 && tokenCount > maxCount {
-            throw AndroidPusherError.overload
-        }
-    }
-    
+    ///生成MD5验证码
     private func generateSign(path: String, bodyString: String) -> String {
         let method = "POST"
         let masterSecret: String
