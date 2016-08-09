@@ -10,6 +10,7 @@ import Foundation
 import SFMongo
 import PerfectNotifications
 import Utilities
+import SFJSON
 
 public enum App: Int, BSONStringConvertible, JSONStringConvertible {
     case 蜜蜂聚财 = 100
@@ -73,7 +74,7 @@ public struct Notification: SFModel {
     ///additional info
     public var extra: Dictionary<String, String>?
     
-    public init(json: JSON) throws {
+    public init(json: SFJSON) throws {
         guard let id = json["_id"].oid, let token = json["userToken"].string, let app = App(rawValue: json["app"].intValue), let title = json["title"].string, let body = json["body"].string, let badge = json["badge"].int, let success = json["success"].bool,let time = json["time"].date else {
             throw SFMongoError.invalidData
         }

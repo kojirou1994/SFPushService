@@ -10,7 +10,7 @@ import Foundation
 import Models
 import PerfectNotifications
 
-typealias PushCompletionHandler = (NotificationResponse, message: String?) -> ()
+typealias PushCompletionHandler = (NotificationResponse, _ message: String?) -> ()
 
 protocol Pushable {
     

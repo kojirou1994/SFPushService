@@ -32,7 +32,7 @@ final class NativeIOSPusher: Pushable {
         
         pusher.pushIOS(configurationName: "蜜蜂聚财", deviceToken: notification.userToken, expiration: 0, priority: 10, notificationItems: notification.items) {
             response in
-            self.completion?(response, message: response.jsonObjectBody["reason"] as? String)
+            self.completion?(response, response.jsonObjectBody["reason"] as? String)
         }
     }
 }

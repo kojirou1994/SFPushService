@@ -9,6 +9,7 @@
 import PerfectHTTP
 import PerfectHTTPServer
 import SFMongo
+import SFJSON
 import Foundation
 import PerfectNotifications
 import MongoDB
@@ -25,7 +26,12 @@ public class PushHandler {
             return
         }
         //将请求body转换为JSON对象
-        let json = JSON.parse(bodyString)
+        guard let json = SFJSON(jsonString: bodyString) else {
+            print("Request is not JSON")
+            response.status = .badRequest
+            response.completed()
+            return
+        }
 
         //检查必须的参数是否提交
         guard let userToken = json["userToken"].string, let app = App(rawValue: json["app"].intValue), let title = json["title"].string, let body = json["body"].string, let badge = json["badge"].int else {

@@ -11,6 +11,7 @@ import SFMongo
 import Models
 import PerfectNotifications
 import PerfectHTTP
+import SFJSON
 
 enum AndroidPusherError: Error {
     case overload
@@ -56,12 +57,8 @@ final class AndroidPusher: Pushable {
                 let re: NotificationResponse
                 if error == nil, let data = data, let response = response as? HTTPURLResponse {
                     re = NotificationResponse(status: HTTPResponseStatus.statusFrom(code: response.statusCode), body: [UInt8](data))
-                    let json = JSON(data: data)
-                    if json["ret"].stringValue == "SUCCESS" {
-                        self.completion?(re, message: json["data"]["msg_id"].string)
-                        return
-                    }else {
-                        self.completion?(re, message: json["data"]["error_code"].string)
+                    if let json = SFJSON(data: data) {
+                        self.completion?(re, json["data"][json["ret"].stringValue == "SUCCESS" ? "msg_id" : "error_code"].string)
                         return
                     }
                 }else {
@@ -79,7 +76,7 @@ final class AndroidPusher: Pushable {
     ///发送失败
     private func fail() {
         let re = NotificationResponse(status: HTTPResponseStatus.badRequest, body: [UInt8]())
-        completion?(re, message: nil)
+        completion?(re, nil)
     }
     
     ///设置请求参数

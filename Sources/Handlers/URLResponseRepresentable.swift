@@ -10,16 +10,16 @@ import Foundation
 import SFMongo
 import Models
 
-protocol URLResponseRepresentable {
-    var responseBody: String {get}
-    var responseDictionary: Dictionary<String, JSONStringConvertible?> {get}
-}
-
-extension URLResponseRepresentable {
-    var responseBody: String {
-        return responseDictionary.jsonString
-    }
-}
+//protocol URLResponseRepresentable {
+//    var responseBody: String {get}
+//    var responseDictionary: Dictionary<String, JSONStringConvertible?> {get}
+//}
+//
+//extension URLResponseRepresentable {
+//    var responseBody: String {
+//        return responseDictionary.jsonString
+//    }
+//}
 
 // MARK: - Models.Notification
 

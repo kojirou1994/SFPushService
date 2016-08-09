@@ -9,6 +9,7 @@
 import Foundation
 import PerfectNotifications
 import SFMongo
+import SFJSON
 
 public extension NotificationPusher {
     public static var jucai: NotificationPusher = {
@@ -24,20 +25,10 @@ public extension NotificationPusher {
     }()
 }
 
-public extension JSON {
+public extension SFJSON {
 
     ///获取自定义信息
     public var extraDictionary: Dictionary<String, String>? {
-        
-        var extra = [String: String]()
-        
-        for (key, value) in self["extra"].dictionaryValue {
-            extra[key] = value.description
-        }
-        
-        if extra.keys.count == 0 {
-            return nil
-        }
-        return extra
+        return self["extra"].dictionary as? Dictionary<String, String>
     }
 }

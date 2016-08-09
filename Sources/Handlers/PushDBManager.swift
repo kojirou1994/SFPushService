@@ -9,6 +9,7 @@
 import MongoDB
 import SFMongo
 import Models
+import SFJSON
 
 struct PushDBManager {
     
@@ -54,7 +55,7 @@ extension PushDBManager {
         let query = BSON()
         _ = query.append(key: "_id", oid: ObjectId.parse(oid: forNotificationId))
         do {
-            return try notiCol.find(query: query)?.map{return try Notification(json: JSON.parse($0.asString))}.first
+            return try notiCol.find(query: query)?.map{return try Notification(json: SFJSON(jsonString: $0.asString)!)}.first
         }catch {
             return nil
         }
@@ -63,7 +64,7 @@ extension PushDBManager {
     ///根据query查询Notification
     func notifications(_ query: BSON) -> [Notification]? {
         do {
-            return try notiCol.find(query: query)?.map{return try Notification(json: JSON.parse($0.asString))}
+            return try notiCol.find(query: query)?.map{return try Notification(json: SFJSON(jsonString: $0.asString)!)}
         }catch {
             return nil
         }
@@ -85,7 +86,7 @@ extension PushDBManager {
         let query = BSON()
         _ = query.append(key: "_id", oid: ObjectId.parse(oid: forLogId))
         do {
-            return try logCol.find(query: query)?.map{return try PushLog(json: JSON.parse($0.asString))}.first
+            return try logCol.find(query: query)?.map{return try PushLog(json: SFJSON(jsonString: $0.asString)!)}.first
         }catch {
             return nil
         }
@@ -96,7 +97,7 @@ extension PushDBManager {
         let query = BSON()
         _ = query.append(key: "notification", oid: ObjectId.parse(oid: forNotification))
         do {
-            return try logCol.find(query: query)?.map{return try PushLog(json: JSON.parse($0.asString))}
+            return try logCol.find(query: query)?.map{return try PushLog(json: SFJSON(jsonString: $0.asString)!)}
         }catch {
             return nil
         }

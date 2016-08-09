@@ -8,6 +8,7 @@
 
 import Foundation
 import SFMongo
+import SFJSON
 
 public enum PushAction: Int, JSONStringConvertible, BSONStringConvertible {
     
@@ -40,7 +41,7 @@ public struct PushLog: SFModel {
     
     var time: Date
     
-    public init(json: JSON) throws {
+    public init(json: SFJSON) throws {
         guard let id = json["_id"].oid, let notification = json["notification"].oid, let action = PushAction.init(rawValue: json["action"].intValue), let time = json["time"].date else {
             throw SFMongoError.invalidData
         }
