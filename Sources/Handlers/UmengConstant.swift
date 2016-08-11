@@ -49,7 +49,7 @@ enum UmengAndroidPushType: String, JSONStringConvertible {
     case filecast = "filecast"
     
     var jsonString: String {
-        return self.rawValue
+        return self.rawValue.jsonString
     }
     
     var maxTokenCount: Int {

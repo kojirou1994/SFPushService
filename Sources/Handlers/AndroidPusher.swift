@@ -12,6 +12,7 @@ import Models
 import PerfectNotifications
 import PerfectHTTP
 import SFJSON
+import SFCurl
 
 enum AndroidPusherError: Error {
     case overload
@@ -45,29 +46,50 @@ final class AndroidPusher: Pushable {
 
         setRequestParam()
         
-        if let bodyData = pushParam.jsonString.data(using: .utf8) {
-            
-            let sign = generateSign(path: UmengPath.send, bodyString: String(data: bodyData, encoding: .utf8)!)
-            
-            var request = URLRequest(url: URL(string: UmengPath.send + "?sign=" + sign)!)
-            request.httpMethod = "POST"
-            request.httpBody = bodyData
-            
-            let task = URLSession.shared.dataTask(with: request) { data, response, error in
-                let re: NotificationResponse
-                if error == nil, let data = data, let response = response as? HTTPURLResponse {
-                    re = NotificationResponse(status: HTTPResponseStatus.statusFrom(code: response.statusCode), body: [UInt8](data))
-                    if let json = SFJSON(data: data) {
-                        self.completion?(re, json["data"][json["ret"].stringValue == "SUCCESS" ? "msg_id" : "error_code"].string)
-                        return
-                    }
-                }else {
-                    self.fail()
-                }
+//        if let bodyData = pushParam.jsonString.data(using: .utf8) {
+//            
+//            let sign = generateSign(path: UmengPath.send, bodyString: String(data: bodyData, encoding: .utf8)!)
+//            
+//            var request = URLRequest(url: URL(string: UmengPath.send + "?sign=" + sign)!)
+//            request.httpMethod = "POST"
+//            request.httpBody = bodyData
+//            
+//            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+//                let re: NotificationResponse
+//                if error == nil, let data = data, let response = response as? HTTPURLResponse {
+//                    re = NotificationResponse(status: HTTPResponseStatus.statusFrom(code: response.statusCode), body: [UInt8](data))
+//                    if let json = SFJSON(data: data) {
+//                        self.completion?(re, json["data"][json["ret"].stringValue == "SUCCESS" ? "msg_id" : "error_code"].string)
+//                        return
+//                    }
+//                }else {
+//                    self.fail()
+//                }
+//            }
+//            
+//            task.resume()
+//        }else {
+//            self.fail()
+//        }
+        let requestBody = pushParam.jsonString
+        let sign = generateSign(path: UmengPath.send, bodyString: requestBody)
+        var request = SFURLRequest(url: UmengPath.send + "?sign=" + sign)
+        // var request = SFURLRequest(url: "http://127.0.0.1:8000/post")
+        request.httpMethod = .post
+        request.httpBody = requestBody
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        do {
+            let response = try SFURLConnection.send(request: request)
+            // dump(response)
+            let bodyData = response.bodyString.cString(using: .utf8)?.map{UInt8($0)} ?? []
+            let notiResponse = NotificationResponse(status: HTTPResponseStatus.statusFrom(code: response.statusCode), body: bodyData)
+            if let json = SFJSON(jsonString: response.bodyString) {
+                self.completion?(notiResponse, json["data"][json["ret"].stringValue == "SUCCESS" ? "msg_id" : "error_code"].string)
+            }else {
+                self.fail()
             }
-            
-            task.resume()
-        }else {
+        }catch {
+            // print("Error")
             self.fail()
         }
         
